@@ -116,7 +116,7 @@ function initTerms({
     'customer_attributes_parentPhone', 'customer_attributes_phone',
     'customer_attributes_email', 'customer_attributes_parentEmail',
     'tildaspec-phone-part[]', 'tildaspec-phone-part[]-iso', 'referalEmail', 'lastname', 'firstname', 'birthday',
-    'parentname',	'parentemail',	'parentphone'
+    'parentname',	'parentemail',	'parentphone', 'tildaspec-cookie'
   ]
 
   function getCookieTildaId(name) {
