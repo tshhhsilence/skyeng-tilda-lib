@@ -111,22 +111,12 @@ function initTerms({
 
 (function () {
   const sensitiveFields = [
-    'name',
-    'parentName',
-    'childName',
-    'phone',
-    'parentPhone',
-    'email',
-    'parentEmail',
-    'customer_attributes_parentName',
-    'customer_attributes_name',
-    'customer_attributes_parentPhone',
-    'customer_attributes_phone',
-    'customer_attributes_email',
-    'customer_attributes_parentEmail',
-    'tildaspec-phone-part[]',
-    'tildaspec-phone-part[]-iso',
-    'tildaspec-cookie',
+    'name', 'parentName', 'childName', 'phone', 'parentPhone', 'email', 'parentEmail',
+    'customer_attributes_parentName', 'customer_attributes_name',
+    'customer_attributes_parentPhone', 'customer_attributes_phone',
+    'customer_attributes_email', 'customer_attributes_parentEmail',
+    'tildaspec-phone-part[]', 'tildaspec-phone-part[]-iso', 'referalEmail', 'lastname', 'firstname', 'birthday',
+    'parentname',	'parentemail',	'parentphone'
   ]
 
   function getCookieTildaId(name) {
