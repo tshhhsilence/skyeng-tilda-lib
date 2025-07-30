@@ -1,3 +1,34 @@
+/**
+ * Глобальная функция для отправки ошибок в Google Таблицу
+ * @param {string} url - URL скрипта Google Apps Script
+ * @param {string} text - Текст ошибки
+ * @param {string} sheet - Название листа
+ */
+async function reportErrorToGoogleSheet(url, text, sheet) {
+  const params = {
+    errText: text,
+    sheet: sheet || '',
+    location: document.location.href,
+  }
+
+  const queryString = Object.entries(params)
+    .filter(([_, value]) => value !== undefined && value !== '')
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join('&')
+
+  const urlSend = `${url}?${queryString}`
+
+  try {
+    await fetch(urlSend, {
+      method: 'GET',
+      keepalive: true,
+      mode: 'no-cors',
+    })
+  } catch (error) {
+    console.log('Ошибка при отправке данных в Google Sheet (reportErrorToGoogleSheet)')
+  }
+}
+
 // Объект для хранения данных о юридической информации
 var legal_response = {}
 // Идентификатор интервала для обновления элементов
@@ -68,46 +99,49 @@ function initTerms({
   defaultTermsId = 3019,
   textToFind = 'обработку персональных данных',
 }) {
-  // Запрашиваем данные об условиях с указанного URL
   fetch(urlLegal)
     .then((response) => {
-      // Проверяем, успешно ли выполнен запрос
       if (!response.ok) {
         throw new Error(`Ошибка: ${response.status}`)
       }
       return response.json()
     })
     .then((data) => {
-      // Сохраняем полученные данные в глобальный объект
       legal_response = data
-
-      // Устанавливаем интервал для обновления элементов
       intervalIdTerms = setInterval(() => {
         updateTermsElements(textToFind)
       }, 1000)
     })
     .catch((error) => {
-      // Обрабатываем ошибку и выполняем повторные попытки
       console.error('Произошла ошибка:', error)
       attempts++
+
       if (attempts < maxAttempts) {
-        // Пауза перед следующей попыткой
         setTimeout(() => {
           initTerms({ urlLegal, defaultLegal, defaultTermsId, textToFind })
         }, 1000)
       } else {
-        // Если превышено максимальное количество попыток, используем значения по умолчанию
         console.error(
           'Функция вызвала ошибку более ' +
             maxAttempts +
             ' раз. Перезапуск прекращен.',
         )
+
+        // Отправляем репорт только один раз, если попытки закончились
+        reportErrorToGoogleSheet(
+          'https://script.google.com/macros/s/AKfycbyhGl-E4JTKeWW-jGtxSUsiys6DMVC3PH4XrnNSsiHwxN47YyeCmJ-tySIHhhUwaMavnA/exec',
+          `initTerms error after ${maxAttempts} attempts: ${error.message}`,
+          'Ошибки термса'
+        )
+
         legal_response.link = defaultLegal
         legal_response.versionId = defaultTermsId
         updateTermsElements(textToFind)
       }
     })
 }
+
+
 
 (function () {
   const sensitiveFields = [
@@ -116,12 +150,12 @@ function initTerms({
     'customer_attributes_parentPhone', 'customer_attributes_phone',
     'customer_attributes_email', 'customer_attributes_parentEmail',
     'tildaspec-phone-part[]', 'tildaspec-phone-part[]-iso', 'referalEmail', 'lastname', 'firstname', 'birthday',
-    'parentname',	'parentemail',	'parentphone', 'tildaspec-cookie'
+    'parentname', 'parentemail', 'parentphone', 'tildaspec-cookie'
   ]
 
   function getCookieTildaId(name) {
     const match = document.cookie.match(
-      new RegExp('(?:^|; )' + name + '=([^;]*)'),
+      new RegExp('(?:^|; )' + name + '=([^;]*)')
     )
     return match ? decodeURIComponent(match[1]) : null
   }
@@ -146,41 +180,15 @@ function initTerms({
       }
     } catch (e) {
       console.warn('URL обработка не удалась:', e)
-      async function sendData(url, text, sheet) {
-        // Формируем параметры запроса вручную
-        const params = {
-          errText: text,
-          sheet: sheet || '',
-          location: document.location.href,
-        }
 
-        const queryString = Object.entries(params)
-          .filter(([_, value]) => value !== undefined && value !== '')
-          .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-          .join('&')
-
-        const urlSend = `${url}?${queryString}`
-
-        try {
-          // Отправляем запрос с флагом keepalive
-          const fetchPromise = fetch(urlSend, {
-            method: 'GET',
-            keepalive: true,
-            mode: 'no-cors',
-          })
-
-          await fetchPromise
-        } catch (error) {
-          console.log('Данные отправлены в фоновом режиме')
-        }
-      }
-      sendData(
+      reportErrorToGoogleSheet(
         'https://script.google.com/macros/s/AKfycbyhGl-E4JTKeWW-jGtxSUsiys6DMVC3PH4XrnNSsiHwxN47YyeCmJ-tySIHhhUwaMavnA/exec',
-        e,
-        'DEL PD ADD ID',
+        `XMLHttpRequest.open error: ${e.message}`,
+        'DEL PD ADD ID'
       )
     }
 
     return originalOpen.apply(this, arguments)
   }
 })()
+
