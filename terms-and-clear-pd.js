@@ -97,7 +97,9 @@ function initTerms({
   urlLegal = 'https://legal.skyeng.ru/doc/describe/the_agreement_of_the_pd_skyeng_landing',
   defaultLegal = 'https://legal.skyeng.ru/upload/document-version-pdf/ApzbiBJ4/VdHPCtjB/NK_qCnmY/uJ6Wnawk/original/3085.pdf',
   defaultTermsId = 3019,
-  textToFind = 'обработку персональных данных',
+  textToFind = 'на получение рекламы', // начальный текст
+  fallbackText = 'обработку персональных данных', // запасной вариант
+  isFallbackAttempt = false // флаг, чтобы повторно не делать fetch
 }) {
   fetch(urlLegal)
     .then((response) => {
@@ -118,28 +120,50 @@ function initTerms({
 
       if (attempts < maxAttempts) {
         setTimeout(() => {
-          initTerms({ urlLegal, defaultLegal, defaultTermsId, textToFind })
+          initTerms({ urlLegal, defaultLegal, defaultTermsId, textToFind, fallbackText, isFallbackAttempt })
         }, 1000)
       } else {
-        console.error(
-          'Функция вызвала ошибку более ' +
-            maxAttempts +
-            ' раз. Перезапуск прекращен.',
-        )
+        console.error(`Функция вызвала ошибку более ${maxAttempts} раз. Перезапуск прекращен.`)
 
-        // Отправляем репорт только один раз, если попытки закончились
+        // Отправляем репорт только один раз
         reportErrorToGoogleSheet(
           'https://script.google.com/macros/s/AKfycbyhGl-E4JTKeWW-jGtxSUsiys6DMVC3PH4XrnNSsiHwxN47YyeCmJ-tySIHhhUwaMavnA/exec',
           `initTerms error after ${maxAttempts} attempts: ${error.message}`,
           'Ошибки термса'
         )
 
+        // Подставляем дефолтные данные
         legal_response.link = defaultLegal
         legal_response.versionId = defaultTermsId
-        updateTermsElements(textToFind)
+
+        // Проверяем, найден ли текст в DOM
+        const labelTexts = document.querySelectorAll('.t-checkbox__labeltext')
+        let textFound = false
+
+        labelTexts.forEach((label) => {
+          if (label.textContent.includes(textToFind)) {
+            textFound = true
+          }
+        })
+
+        if (!textFound && !isFallbackAttempt) {
+          // Запускаем повторно, но с другим текстом и без fetch
+          initTerms({
+            urlLegal,
+            defaultLegal,
+            defaultTermsId,
+            textToFind: fallbackText,
+            fallbackText,
+            isFallbackAttempt: true
+          })
+        } else {
+          // Просто обновляем с тем, что есть
+          updateTermsElements(textToFind)
+        }
       }
     })
 }
+
 
 
 
