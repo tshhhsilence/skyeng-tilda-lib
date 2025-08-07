@@ -102,14 +102,14 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
 const termsConsts = {
   terms: {
     url: 'https://legal.skyeng.ru/doc/describe/2068',
-    inputName: 'termsDocumentVersionId',
+    inputName: 'termsDocumentVersionIdTemp',
     textToFind: 'обработку персональных данных',
     fallbackId: '3970',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/eRy-_sJz/_AyguvNa/KywmoFDR/h5P1cMQo/original/4039.pdf',
   },
   adv: {
     url: 'https://legal.skyeng.ru/doc/describe/2066',
-    inputName: 'advDocumentVersionId',
+    inputName: 'termsDocumentVersionId',
     textToFind: 'на получение рекламы',
     fallbackId: '3968',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/Z2eOzlap/4rqD5YqN/3_ibYi7P/5g2y5UGH/original/4037.pdf',
