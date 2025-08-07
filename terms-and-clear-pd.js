@@ -29,143 +29,102 @@ async function reportErrorToGoogleSheet(url, text, sheet) {
   }
 }
 
-// Объект для хранения данных о юридической информации
+// Глобальный объект для хранения всех юридических данных
 var legal_response = {}
-// Идентификатор интервала для обновления элементов
-var intervalIdTerms
 
-/**
- * Функция для обновления элементов с текстом, содержащим юридическую информацию
- * textToFind - Текст, который нужно найти и заменить на ссылку
- */
-function updateTermsElements(textToFind) {
-  try {
-    // Находим все элементы с текстом в лейблах чекбоксов
-    const labelTexts = document.querySelectorAll('.t-checkbox__labeltext')
+async function updateLegalSection({ url, inputName, textToFind, fallbackId, fallbackLink }) {
+  let versionId = fallbackId
+  let link = fallbackLink
+  let attempts = 0
+  const maxAttempts = 5
 
-    if (labelTexts.length > 0) {
-      labelTexts.forEach((label) => {
-        const text = label.textContent
+  async function fetchLegalData() {
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
+      const data = await res.json()
+      versionId = data.versionId
+      link = data.link
 
-        // Если текст содержит искомую строку, заменяем её на ссылку
-        if (text.includes(textToFind)) {
-          const newLink = document.createElement('a')
-          newLink.href = legal_response.link
-          newLink.target = '_blank'
-          newLink.rel = 'noreferrer noopener' // Защита при открытии ссылок
-          newLink.className = 'agreement_link'
-          newLink.textContent = textToFind
-
-          // Заменяем найденный текст на HTML ссылки
-          label.innerHTML = label.innerHTML.replace(
-            textToFind,
-            newLink.outerHTML,
-          )
-        }
-      })
-
-      // Устанавливаем значение для скрытых input элементов
-      const inputs = document.querySelectorAll(
-        'input[name="termsDocumentVersionId"]',
-      )
-      inputs.forEach((input) => {
-        input.value = legal_response.versionId
-      })
-
-      // Останавливаем интервал, так как все элементы обновлены
-      clearInterval(intervalIdTerms)
-    }
-  } catch (error) {
-    // Логируем ошибку в консоль, если произошел сбой
-    console.error('Произошла ошибка:', error)
-  }
-}
-
-// Переменная для отслеживания количества попыток
-var attempts = 0
-// Максимальное количество попыток
-const maxAttempts = 10
-
-/**
- * Функция инициализации обновления условий
- * urlLegal - URL для получения данных об условиях
- * defaultLegal - URL по умолчанию на случай ошибки
- * defaultTermsId - ID версии условий по умолчанию
- * textToFind - Текст для поиска и замены
- */
-function initTerms({
-  urlLegal = 'https://legal.skyeng.ru/doc/describe/the_agreement_of_the_pd_skyeng_landing',
-  defaultLegal = 'https://legal.skyeng.ru/upload/document-version-pdf/ApzbiBJ4/VdHPCtjB/NK_qCnmY/uJ6Wnawk/original/3085.pdf',
-  defaultTermsId = 3019,
-  textToFind = 'на получение рекламы', // начальный текст
-  fallbackText = 'обработку персональных данных', // запасной вариант
-  isFallbackAttempt = false // флаг, чтобы повторно не делать fetch
-}) {
-  fetch(urlLegal)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`Ошибка: ${response.status}`)
-      }
-      return response.json()
-    })
-    .then((data) => {
-      legal_response = data
-      intervalIdTerms = setInterval(() => {
-        updateTermsElements(textToFind)
-      }, 1000)
-    })
-    .catch((error) => {
-      console.error('Произошла ошибка:', error)
+      // Сохраняем ответ в глобальный объект
+      legal_response[inputName] = data
+    } catch (error) {
       attempts++
-
       if (attempts < maxAttempts) {
-        setTimeout(() => {
-          initTerms({ urlLegal, defaultLegal, defaultTermsId, textToFind, fallbackText, isFallbackAttempt })
-        }, 1000)
+        await new Promise(r => setTimeout(r, 1000))
+        return fetchLegalData()
       } else {
-        console.error(`Функция вызвала ошибку более ${maxAttempts} раз. Перезапуск прекращен.`)
-
-        // Отправляем репорт только один раз
         reportErrorToGoogleSheet(
           'https://script.google.com/macros/s/AKfycbyhGl-E4JTKeWW-jGtxSUsiys6DMVC3PH4XrnNSsiHwxN47YyeCmJ-tySIHhhUwaMavnA/exec',
-          `initTerms error after ${maxAttempts} attempts: ${error.message}`,
+          `updateLegalSection (${inputName}) failed after ${maxAttempts} attempts: ${error.message}`,
           'Ошибки термса'
         )
 
-        // Подставляем дефолтные данные
-        legal_response.link = defaultLegal
-        legal_response.versionId = defaultTermsId
-
-        // Проверяем, найден ли текст в DOM
-        const labelTexts = document.querySelectorAll('.t-checkbox__labeltext')
-        let textFound = false
-
-        labelTexts.forEach((label) => {
-          if (label.textContent.includes(textToFind)) {
-            textFound = true
-          }
-        })
-
-        if (!textFound && !isFallbackAttempt) {
-          // Запускаем повторно, но с другим текстом и без fetch
-          initTerms({
-            urlLegal,
-            defaultLegal,
-            defaultTermsId,
-            textToFind: fallbackText,
-            fallbackText,
-            isFallbackAttempt: true
-          })
-        } else {
-          // Просто обновляем с тем, что есть
-          updateTermsElements(textToFind)
+        // fallback сохраняем тоже
+        legal_response[inputName] = {
+          versionId: fallbackId,
+          link: fallbackLink
         }
       }
+    }
+  }
+
+  await fetchLegalData()
+
+  const intervalId = setInterval(() => {
+    const labelTexts = document.querySelectorAll('.t-checkbox__labeltext')
+    let updated = false
+
+    labelTexts.forEach((label) => {
+      if (label.textContent.includes(textToFind)) {
+        const newLink = document.createElement('a')
+        newLink.href = link
+        newLink.target = '_blank'
+        newLink.rel = 'noreferrer noopener'
+        newLink.className = 'agreement_link'
+        newLink.textContent = textToFind
+
+        label.innerHTML = label.innerHTML.replace(textToFind, newLink.outerHTML)
+        updated = true
+      }
     })
+
+    if (updated) {
+      const inputs = document.querySelectorAll(`input[name="${inputName}"]`)
+      inputs.forEach((input) => {
+        input.value = versionId
+      })
+      clearInterval(intervalId)
+    }
+  }, 1000)
 }
 
+function initTerms(customConfig) {
+  const defaultConfig = [
+    {
+      url: 'https://legal.skyeng.ru/doc/describe/2068',
+      inputName: 'termsDocumentVersionId',
+      textToFind: 'обработку персональных данных',
+      fallbackId: 3970,
+      fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/eRy-_sJz/_AyguvNa/KywmoFDR/h5P1cMQo/original/4039.pdf'
+    },
+    {
+      url: 'https://legal.skyeng.ru/doc/describe/2066',
+      inputName: 'advDocumentVersionId',
+      textToFind: 'на получение рекламы',
+      fallbackId: 3968,
+      fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/Z2eOzlap/4rqD5YqN/3_ibYi7P/5g2y5UGH/original/4037.pdf'
+    }
+  ]
 
+  const config = Array.isArray(customConfig)
+    ? customConfig
+    : Array.isArray(window.termsConfig)
+      ? window.termsConfig
+      : defaultConfig
 
+  config.forEach(cfg => updateLegalSection(cfg))
+}
 
 (function () {
   const sensitiveFields = [
@@ -215,4 +174,3 @@ function initTerms({
     return originalOpen.apply(this, arguments)
   }
 })()
-
