@@ -99,21 +99,49 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
   }, 1000)
 }
 
+const termsUrl = 'https://legal.skyeng.ru/doc/describe/2068',
+  termsInput = 'termsDocumentVersionId',
+  termsTextToFind = 'обработку персональных данных',
+  termsFallbackid = '3970',
+  termsFallbackLink = 'https://legal.skyeng.ru/upload/document-version-pdf/eRy-_sJz/_AyguvNa/KywmoFDR/h5P1cMQo/original/4039.pdf',
+  advUrl = 'https://legal.skyeng.ru/doc/describe/2066',
+  advInput = 'advDocumentVersionId',
+  advTextToFind = 'на получение рекламы',
+  advFallbackid = '3968',
+  advFallbackLink = 'https://legal.skyeng.ru/upload/document-version-pdf/Z2eOzlap/4rqD5YqN/3_ibYi7P/5g2y5UGH/original/4037.pdf'
+
+const termsConsts = {
+  terms: {
+    url: 'https://legal.skyeng.ru/doc/describe/2068',
+    inputName: 'termsDocumentVersionId',
+    textToFind: 'обработку персональных данных',
+    fallbackId: '3970',
+    fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/eRy-_sJz/_AyguvNa/KywmoFDR/h5P1cMQo/original/4039.pdf',
+  },
+  adv: {
+    url: 'https://legal.skyeng.ru/doc/describe/2066',
+    inputName: 'advDocumentVersionId',
+    textToFind: 'на получение рекламы',
+    fallbackId: '3968',
+    fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/Z2eOzlap/4rqD5YqN/3_ibYi7P/5g2y5UGH/original/4037.pdf',
+  }
+}
+
 function initTerms(customConfig) {
   const defaultConfig = [
     {
-      url: 'https://legal.skyeng.ru/doc/describe/2068',
-      inputName: 'termsDocumentVersionId',
-      textToFind: 'обработку персональных данных',
-      fallbackId: 3970,
-      fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/eRy-_sJz/_AyguvNa/KywmoFDR/h5P1cMQo/original/4039.pdf'
+      url: termsConsts.terms.url,
+      inputName: termsConsts.terms.inputName,
+      textToFind: termsConsts.terms.textToFind,
+      fallbackId: termsConsts.terms.fallbackId,
+      fallbackLink: termsConsts.terms.fallbackLink
     },
     {
-      url: 'https://legal.skyeng.ru/doc/describe/2066',
-      inputName: 'advDocumentVersionId',
-      textToFind: 'на получение рекламы',
-      fallbackId: 3968,
-      fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/Z2eOzlap/4rqD5YqN/3_ibYi7P/5g2y5UGH/original/4037.pdf'
+      url: termsConsts.adv.url,
+      inputName: termsConsts.adv.inputName,
+      textToFind: termsConsts.adv.textToFind,
+      fallbackId: termsConsts.adv.fallbackId,
+      fallbackLink: termsConsts.adv.fallbackLink
     }
   ]
 
