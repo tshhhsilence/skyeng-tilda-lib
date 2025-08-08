@@ -9,11 +9,11 @@ function initAdvObserver() {
     const hiddenInput = form.querySelector('input[name="termsDocumentVersionId"]');
 
     if (!checkbox || !hiddenInput) {
-      console.log('[AdObserver] Пропущена форма: чекбокс или инпут не найдены', form);
+      // console.log('[AdObserver] Пропущена форма: чекбокс или инпут не найдены', form);
       return;
     }
 
-    console.log('[AdObserver] Обрабатываем форму:', form);
+    // console.log('[AdObserver] Обрабатываем форму:', form);
 
     const waitUntilValueSet = () => {
       const currentValue = hiddenInput.value;
@@ -25,16 +25,16 @@ function initAdvObserver() {
 
       if (!hiddenInput.dataset.originalValue) {
         hiddenInput.dataset.originalValue = currentValue;
-        console.log('[AdObserver] Сохранили оригинальное значение:', currentValue);
+        // console.log('[AdObserver] Сохранили оригинальное значение:', currentValue);
       }
 
       const updateHiddenValue = () => {
         if (checkbox.checked) {
           hiddenInput.value = hiddenInput.dataset.originalValue || '';
-          console.log('[AdObserver] Чекбокс ВКЛ — восстановили value:', hiddenInput.value);
+          // console.log('[AdObserver] Чекбокс ВКЛ — восстановили value:', hiddenInput.value);
         } else {
           hiddenInput.value = '';
-          console.log('[AdObserver] Чекбокс ВЫКЛ — очистили value');
+          // console.log('[AdObserver] Чекбокс ВЫКЛ — очистили value');
         }
       };
 
@@ -57,7 +57,7 @@ function initAdvObserver() {
   observer.observe(document.body, OBSERVER_CONFIG);
 
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('[AdObserver] DOM загружен');
+    // console.log('[AdObserver] DOM загружен');
     processForms();
   });
 }
