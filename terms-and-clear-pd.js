@@ -1,3 +1,67 @@
+function initAdvObserver() {
+  const OBSERVER_CONFIG = { childList: true, subtree: true };
+
+  const handleForm = (form) => {
+    if (form.dataset._observerAttached) return;
+    form.dataset._observerAttached = "true";
+
+    const checkbox = form.querySelector('input[name="advertisment_agree"]');
+    const hiddenInput = form.querySelector('input[name="termsDocumentVersionId"]');
+
+    if (!checkbox || !hiddenInput) {
+      console.log('[AdObserver] Пропущена форма: чекбокс или инпут не найдены', form);
+      return;
+    }
+
+    console.log('[AdObserver] Обрабатываем форму:', form);
+
+    const waitUntilValueSet = () => {
+      const currentValue = hiddenInput.value;
+      if (!currentValue) {
+        // Ждём, пока Тильда проставит value
+        requestAnimationFrame(waitUntilValueSet);
+        return;
+      }
+
+      if (!hiddenInput.dataset.originalValue) {
+        hiddenInput.dataset.originalValue = currentValue;
+        console.log('[AdObserver] Сохранили оригинальное значение:', currentValue);
+      }
+
+      const updateHiddenValue = () => {
+        if (checkbox.checked) {
+          hiddenInput.value = hiddenInput.dataset.originalValue || '';
+          console.log('[AdObserver] Чекбокс ВКЛ — восстановили value:', hiddenInput.value);
+        } else {
+          hiddenInput.value = '';
+          console.log('[AdObserver] Чекбокс ВЫКЛ — очистили value');
+        }
+      };
+
+      // Навешиваем и вызываем
+      checkbox.addEventListener('change', updateHiddenValue);
+      updateHiddenValue();
+    };
+
+    waitUntilValueSet();
+  };
+
+  const processForms = () => {
+    document.querySelectorAll('form.t-form').forEach(handleForm);
+  };
+
+  const observer = new MutationObserver(() => {
+    processForms();
+  });
+
+  observer.observe(document.body, OBSERVER_CONFIG);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('[AdObserver] DOM загружен');
+    processForms();
+  });
+}
+
 /**
  * Глобальная функция для отправки ошибок в Google Таблицу
  * @param {string} url - URL скрипта Google Apps Script
@@ -141,6 +205,9 @@ function initTerms(customConfig) {
       : defaultConfig
 
   config.forEach(cfg => updateLegalSection(cfg))
+
+  // Запускаем наблюдатель за формами
+  initAdvObserver();
 }
 
 (function () {
