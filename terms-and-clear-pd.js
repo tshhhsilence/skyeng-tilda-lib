@@ -18,30 +18,28 @@ function initAdvObserver() {
     const waitUntilValueSet = () => {
       const currentValue = hiddenInput.value;
       if (!currentValue) {
-        // Ждём, пока Тильда проставит value
         requestAnimationFrame(waitUntilValueSet);
         return;
       }
-
-      if (!hiddenInput.dataset.originalValue) {
-        hiddenInput.dataset.originalValue = currentValue;
-        // console.log('[AdObserver] Сохранили оригинальное значение:', currentValue);
+    
+      if (!hiddenInput.dataset.originalName) {
+        hiddenInput.dataset.originalName = hiddenInput.name; // Сохраняем оригинальное имя
       }
-
-      const updateHiddenValue = () => {
+    
+      const updateHiddenName = () => {
         if (checkbox.checked) {
-          hiddenInput.value = hiddenInput.dataset.originalValue || '';
-          // console.log('[AdObserver] Чекбокс ВКЛ — восстановили value:', hiddenInput.value);
+          hiddenInput.name = hiddenInput.dataset.originalName || 'termsDocumentVersionId';
+          // console.log('[AdObserver] Чекбокс ВКЛ — name:', hiddenInput.name);
         } else {
-          hiddenInput.value = '';
-          // console.log('[AdObserver] Чекбокс ВЫКЛ — очистили value');
+          hiddenInput.name = 'termsDocumentVersionId_kostilek';
+          // console.log('[AdObserver] Чекбокс ВЫКЛ — name:', hiddenInput.name);
         }
       };
-
-      // Навешиваем и вызываем
-      checkbox.addEventListener('change', updateHiddenValue);
-      updateHiddenValue();
+    
+      checkbox.addEventListener('change', updateHiddenName);
+      updateHiddenName();
     };
+
 
     waitUntilValueSet();
   };
