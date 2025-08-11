@@ -95,88 +95,101 @@ async function reportErrorToGoogleSheet(url, text, sheet) {
 var legal_response = {}
 
 async function updateLegalSection({ url, inputName, textToFind, fallbackId, fallbackLink }) {
-  let versionId = fallbackId
-  let link = fallbackLink
-  let attempts = 0
-  const maxAttempts = 5
+  let versionId = fallbackId;
+  let link = fallbackLink;
+  let attempts = 0;
+  const maxAttempts = 5;
 
   async function fetchLegalData() {
     try {
-      const res = await fetch(url)
-      if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
-      const data = await res.json()
-      versionId = data.versionId
-      link = data.link
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+      const data = await res.json();
+      versionId = data.versionId;
+      link = data.link;
 
-      // Сохраняем ответ в глобальный объект
-      legal_response[inputName] = data
+      legal_response[Array.isArray(inputName) ? inputName[0] : inputName] = data;
     } catch (error) {
-      attempts++
+      attempts++;
       if (attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 1000))
-        return fetchLegalData()
+        await new Promise(r => setTimeout(r, 1000));
+        return fetchLegalData();
       } else {
         reportErrorToGoogleSheet(
           'https://script.google.com/macros/s/AKfycbyhGl-E4JTKeWW-jGtxSUsiys6DMVC3PH4XrnNSsiHwxN47YyeCmJ-tySIHhhUwaMavnA/exec',
           `updateLegalSection (${inputName}) failed after ${maxAttempts} attempts: ${error.message}`,
           'Ошибки термса'
-        )
+        );
 
-        // fallback сохраняем тоже
-        legal_response[inputName] = {
+        legal_response[Array.isArray(inputName) ? inputName[0] : inputName] = {
           versionId: fallbackId,
           link: fallbackLink
-        }
+        };
       }
     }
   }
 
-  await fetchLegalData()
+  await fetchLegalData();
 
   const intervalId = setInterval(() => {
-    const labelTexts = document.querySelectorAll('.t-checkbox__labeltext')
-    let updated = false
+    const labelTexts = document.querySelectorAll('.t-checkbox__labeltext');
+    let updated = false;
 
     labelTexts.forEach((label) => {
       if (label.textContent.includes(textToFind)) {
-        const newLink = document.createElement('a')
-        newLink.href = link
-        newLink.target = '_blank'
-        newLink.rel = 'noreferrer noopener'
-        newLink.className = 'agreement_link'
-        newLink.textContent = textToFind
+        const newLink = document.createElement('a');
+        newLink.href = link;
+        newLink.target = '_blank';
+        newLink.rel = 'noreferrer noopener';
+        newLink.className = 'agreement_link';
+        newLink.textContent = textToFind;
 
-        label.innerHTML = label.innerHTML.replace(textToFind, newLink.outerHTML)
-        updated = true
+        label.innerHTML = label.innerHTML.replace(textToFind, newLink.outerHTML);
+        updated = true;
       }
-    })
+    });
 
     if (updated) {
-      const inputs = document.querySelectorAll(`input[name="${inputName}"]`)
-      inputs.forEach((input) => {
-        input.value = versionId
-      })
-      clearInterval(intervalId)
+      let selectors = [];
+      if (Array.isArray(inputName)) {
+        selectors = inputName.map(name => `input[name="${name}"]`);
+      } else {
+        selectors = [`input[name="${inputName}"]`];
+      }
+
+      let found = false;
+      for (const selector of selectors) {
+        const inputs = document.querySelectorAll(selector);
+        if (inputs.length > 0) {
+          inputs.forEach((input) => {
+            input.value = versionId;
+          });
+          found = true;
+          break; // приоритет у первого найденного
+        }
+      }
+      if (found) clearInterval(intervalId);
     }
-  }, 1000)
+  }, 1000);
 }
 
 const termsConsts = {
   terms: {
     url: 'https://legal.skyeng.ru/doc/describe/2068',
-    inputName: 'termsDocumentVersionIdTemp',
+    inputName: ['termsDocumentVersionIdTemp', 'termsDocumentVersionId'], // два имени, сначала ищет первое, затем второе
     textToFind: 'обработку персональных данных',
     fallbackId: '3970',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/eRy-_sJz/_AyguvNa/KywmoFDR/h5P1cMQo/original/4039.pdf',
   },
   adv: {
     url: 'https://legal.skyeng.ru/doc/describe/2066',
-    inputName: 'termsDocumentVersionId',
+    inputName: ['termsDocumentVersionId'], // два имени
     textToFind: 'на получение рекламы',
     fallbackId: '3968',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/Z2eOzlap/4rqD5YqN/3_ibYi7P/5g2y5UGH/original/4037.pdf',
   }
-}
+};
+
 
 function initTerms(customConfig) {
   const defaultConfig = [
