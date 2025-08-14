@@ -137,23 +137,23 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
     let updated = false;
 
     labelTexts.forEach((label) => {
-      const texts = Array.isArray(textToFind) ? textToFind : [textToFind];
-    
-      for (const txt of texts) {
-        if (label.textContent.includes(txt)) {
+      const searchTexts = Array.isArray(textToFind) ? textToFind : [textToFind];
+      
+      searchTexts.forEach(text => {
+        if (label.textContent.includes(text)) {
           const newLink = document.createElement('a');
           newLink.href = link;
           newLink.target = '_blank';
           newLink.rel = 'noreferrer noopener';
           newLink.className = 'agreement_link';
-          newLink.textContent = txt;
+          newLink.textContent = text;
     
-          label.innerHTML = label.innerHTML.replace(txt, newLink.outerHTML);
+          label.innerHTML = label.innerHTML.replace(text, newLink.outerHTML);
           updated = true;
-          break; // нашли один из вариантов — выходим из цикла
         }
-      }
+      });
     });
+
 
 
     if (updated) {
