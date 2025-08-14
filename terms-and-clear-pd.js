@@ -136,18 +136,24 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
     let updated = false;
 
     labelTexts.forEach((label) => {
-      if (label.textContent.includes(textToFind)) {
-        const newLink = document.createElement('a');
-        newLink.href = link;
-        newLink.target = '_blank';
-        newLink.rel = 'noreferrer noopener';
-        newLink.className = 'agreement_link';
-        newLink.textContent = textToFind;
-
-        label.innerHTML = label.innerHTML.replace(textToFind, newLink.outerHTML);
-        updated = true;
+      const texts = Array.isArray(textToFind) ? textToFind : [textToFind];
+    
+      for (const txt of texts) {
+        if (label.textContent.includes(txt)) {
+          const newLink = document.createElement('a');
+          newLink.href = link;
+          newLink.target = '_blank';
+          newLink.rel = 'noreferrer noopener';
+          newLink.className = 'agreement_link';
+          newLink.textContent = txt;
+    
+          label.innerHTML = label.innerHTML.replace(txt, newLink.outerHTML);
+          updated = true;
+          break; // нашли один из вариантов — выходим из цикла
+        }
       }
     });
+
 
     if (updated) {
       let selectors = [];
@@ -176,19 +182,20 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
 const termsConsts = {
   terms: {
     url: 'https://legal.skyeng.ru/doc/describe/2068',
-    inputName: ['termsDocumentVersionIdTemp', 'termsDocumentVersionId'], // два имени, сначала ищет первое, затем второе
-    textToFind: 'обработку персональных данных',
+    inputName: ['termsDocumentVersionIdTemp', 'termsDocumentVersionId'],
+    textToFind: ['на обработку персональных данных', 'на&nbsp;обработку персональных данных', 'обработку персональных данных'], // два варианта
     fallbackId: '3970',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/eRy-_sJz/_AyguvNa/KywmoFDR/h5P1cMQo/original/4039.pdf',
   },
   adv: {
     url: 'https://legal.skyeng.ru/doc/describe/2066',
-    inputName: ['termsDocumentVersionId'], // два имени
-    textToFind: 'на получение рекламы',
+    inputName: ['termsDocumentVersionId'],
+    textToFind: ['на получение рекламы', 'на&nbsp;получение рекламы'], // несколько вариантов
     fallbackId: '3968',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/Z2eOzlap/4rqD5YqN/3_ibYi7P/5g2y5UGH/original/4037.pdf',
   }
 };
+
 
 
 function initTerms(customConfig) {
