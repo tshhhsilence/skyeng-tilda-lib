@@ -1,4 +1,4 @@
-// v1.5.2
+// v1.5.3
 function initAdvObserver() {
   const OBSERVER_CONFIG = { childList: true, subtree: true };
 
