@@ -210,7 +210,7 @@ function initTerms(customConfig) {
       textToFind: termsConsts.terms.textToFind,
       fallbackId: termsConsts.terms.fallbackId,
       fallbackLink: termsConsts.terms.fallbackLink,
-      fallbackLink: termsConsts.terms.priority
+      priority: termsConsts.terms.priority
     },
     {
       url: termsConsts.adv.url,
@@ -218,7 +218,7 @@ function initTerms(customConfig) {
       textToFind: termsConsts.adv.textToFind,
       fallbackId: termsConsts.adv.fallbackId,
       fallbackLink: termsConsts.adv.fallbackLink,
-      fallbackLink: termsConsts.adv.priority
+      priority: termsConsts.adv.priority
     }
   ]
 
