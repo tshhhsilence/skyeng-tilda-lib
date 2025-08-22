@@ -1,4 +1,4 @@
-// v1.6.1
+// v1.7.0
 function initAdvObserver() {
   const OBSERVER_CONFIG = { childList: true, subtree: true };
 
@@ -95,7 +95,7 @@ async function reportErrorToGoogleSheet(url, text, sheet) {
 // Глобальный объект для хранения всех юридических данных
 var legal_response = {}
 
-async function updateLegalSection({ url, inputName, textToFind, fallbackId, fallbackLink }) {
+async function updateLegalSection({ url, inputName, textToFind, fallbackId, fallbackLink, priority }) {
   let versionId = fallbackId;
   let link = fallbackLink;
   let attempts = 0;
@@ -163,10 +163,16 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
         const inputs = document.querySelectorAll(selector);
         if (inputs.length > 0) {
           inputs.forEach((input) => {
-            input.value = versionId;
+            const currentPriority = parseInt(input.dataset.priority || "0", 10);
+
+            // обновляем только если наш приоритет выше или поле пустое
+            if (!input.value || priority >= currentPriority) {
+              input.value = versionId;
+              input.dataset.priority = priority; // запоминаем чей приоритет
+            }
           });
           found = true;
-          break; // приоритет у первого найденного
+          break;
         }
       }
       if (found) clearInterval(intervalId);
@@ -174,22 +180,26 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
   }, 1000);
 }
 
+
 const termsConsts = {
   terms: {
     url: 'https://legal.skyeng.ru/doc/describe/2068',
-    inputName: ['termsDocumentVersionIdTemp', 'termsDocumentVersionId'], // два имени, сначала ищет первое, затем второе
+    inputName: ['termsDocumentVersionIdTemp', 'termsDocumentVersionId'],
     textToFind: 'обработку персональных данных',
     fallbackId: '3970',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/eRy-_sJz/_AyguvNa/KywmoFDR/h5P1cMQo/original/4039.pdf',
+    priority: 1 // низкий приоритет
   },
   adv: {
     url: 'https://legal.skyeng.ru/doc/describe/2066',
-    inputName: ['termsDocumentVersionId'], // два имени
+    inputName: ['termsDocumentVersionId'],
     textToFind: 'на получение рекламы',
     fallbackId: '3968',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/Z2eOzlap/4rqD5YqN/3_ibYi7P/5g2y5UGH/original/4037.pdf',
+    priority: 2 // высокий приоритет
   }
 };
+
 
 
 function initTerms(customConfig) {
