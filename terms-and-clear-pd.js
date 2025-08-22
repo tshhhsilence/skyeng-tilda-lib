@@ -1,4 +1,4 @@
-// v1.7.0
+// v1.7.2
 function initAdvObserver() {
   const OBSERVER_CONFIG = { childList: true, subtree: true };
 
@@ -209,14 +209,16 @@ function initTerms(customConfig) {
       inputName: termsConsts.terms.inputName,
       textToFind: termsConsts.terms.textToFind,
       fallbackId: termsConsts.terms.fallbackId,
-      fallbackLink: termsConsts.terms.fallbackLink
+      fallbackLink: termsConsts.terms.fallbackLink,
+      fallbackLink: termsConsts.terms.priority
     },
     {
       url: termsConsts.adv.url,
       inputName: termsConsts.adv.inputName,
       textToFind: termsConsts.adv.textToFind,
       fallbackId: termsConsts.adv.fallbackId,
-      fallbackLink: termsConsts.adv.fallbackLink
+      fallbackLink: termsConsts.adv.fallbackLink,
+      fallbackLink: termsConsts.adv.priority
     }
   ]
 
