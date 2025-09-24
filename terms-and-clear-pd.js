@@ -6,7 +6,7 @@ function initAdvObserver() {
     if (form.dataset._observerAttached) return;
     form.dataset._observerAttached = "true";
 
-    const checkbox = form.querySelector('input[name="advertisment_agree"]');
+    const checkbox = form.querySelector('input[name="advertisment_agree"], input[name="advertisement_agree"]');
     const hiddenInput = form.querySelector('input[name="termsDocumentVersionId"]');
 
     if (!checkbox || !hiddenInput) {
