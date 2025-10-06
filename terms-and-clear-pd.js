@@ -1,4 +1,4 @@
-// v1.7.2
+ // v1.7.5
 function initAdvObserver() {
   const OBSERVER_CONFIG = { childList: true, subtree: true };
 
@@ -137,18 +137,19 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
     let updated = false;
 
     labelTexts.forEach((label) => {
-      if (label.textContent.includes(textToFind)) {
+      if (label.textContent.includes(textToFind) && !label.querySelector('a.agreement_link')) {
         const newLink = document.createElement('a');
         newLink.href = link;
         newLink.target = '_blank';
         newLink.rel = 'noreferrer noopener';
         newLink.className = 'agreement_link';
         newLink.textContent = textToFind;
-
+    
         label.innerHTML = label.innerHTML.replace(textToFind, newLink.outerHTML);
         updated = true;
       }
     });
+
 
     if (updated) {
       let selectors = [];
@@ -157,14 +158,14 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
       } else {
         selectors = [`input[name="${inputName}"]`];
       }
-
+    
       let found = false;
       for (const selector of selectors) {
         const inputs = document.querySelectorAll(selector);
         if (inputs.length > 0) {
           inputs.forEach((input) => {
             const currentPriority = parseInt(input.dataset.priority || "0", 10);
-
+    
             // обновляем только если наш приоритет выше или поле пустое
             if (!input.value || priority >= currentPriority) {
               input.value = versionId;
@@ -175,8 +176,22 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
           break;
         }
       }
-      if (found) clearInterval(intervalId);
+      if (found) {
+        clearInterval(intervalId);
+      } else {
+        const msg = `[TermsObserver] Не найден hidden input для ${inputName}. Ссылка вставлена, но ID не установился.`;
+        console.warn(msg);
+      
+        // отправляем в гугл-таблицу
+        reportErrorToGoogleSheet(
+          'https://script.google.com/macros/s/AKfycbyhGl-E4JTKeWW-jGtxSUsiys6DMVC3PH4XrnNSsiHwxN47YyeCmJ-tySIHhhUwaMavnA/exec',
+          msg,
+          'Ошибки термса'
+        );
+      }
+
     }
+
   }, 1000);
 }
 
