@@ -1,4 +1,4 @@
-// v1.7.2
+// v1.7.4
 function initAdvObserver() {
   const OBSERVER_CONFIG = { childList: true, subtree: true };
 
@@ -7,7 +7,7 @@ function initAdvObserver() {
     form.dataset._observerAttached = "true";
 
     const checkbox = form.querySelector('input[name="advertisment_agree"], input[name="advertisement_agree"]');
-    const hiddenInput = form.querySelector('input[name="termsDocumentVersionId"]');
+    const hiddenInput = form.querySelector('input[name="termsDocumentVersionId"], input[name="terms_document_version_id"]');
 
     if (!checkbox || !hiddenInput) {
       // console.log('[AdObserver] Пропущена форма: чекбокс или инпут не найдены', form);
@@ -192,7 +192,7 @@ const termsConsts = {
   },
   adv: {
     url: 'https://legal.skyeng.ru/doc/describe/2066',
-    inputName: ['termsDocumentVersionId'],
+    inputName: ['termsDocumentVersionId', 'terms_document_version_id'],
     textToFind: 'на получение рекламы',
     fallbackId: '3968',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/Z2eOzlap/4rqD5YqN/3_ibYi7P/5g2y5UGH/original/4037.pdf',
