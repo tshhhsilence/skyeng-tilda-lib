@@ -1,4 +1,4 @@
-// v1.7.4
+// v1.8.0 (модификация: вставляет айди в оба инпута одновременно, для лида и заявки)
 function initAdvObserver() {
   const OBSERVER_CONFIG = { childList: true, subtree: true };
 
@@ -7,40 +7,42 @@ function initAdvObserver() {
     form.dataset._observerAttached = "true";
 
     const checkbox = form.querySelector('input[name="advertisment_agree"], input[name="advertisement_agree"]');
-    const hiddenInput = form.querySelector('input[name="termsDocumentVersionId"], input[name="terms_document_version_id"]');
+    const hiddenInputs = form.querySelectorAll('input[name="termsDocumentVersionId"], input[name="terms_document_version_id"]');
 
-    if (!checkbox || !hiddenInput) {
+    if (!checkbox || hiddenInputs.length === 0) {
       // console.log('[AdObserver] Пропущена форма: чекбокс или инпут не найдены', form);
       return;
     }
 
-    // console.log('[AdObserver] Обрабатываем форму:', form);
-
     const waitUntilValueSet = () => {
-      const currentValue = hiddenInput.value;
-      if (!currentValue) {
+      // Проверяем, что хотя бы одно поле уже получило значение
+      const allEmpty = Array.from(hiddenInputs).every((input) => !input.value);
+      if (allEmpty) {
         requestAnimationFrame(waitUntilValueSet);
         return;
       }
-    
-      if (!hiddenInput.dataset.originalName) {
-        hiddenInput.dataset.originalName = hiddenInput.name; // Сохраняем оригинальное имя
-      }
-    
-      const updateHiddenName = () => {
-        if (checkbox.checked) {
-          hiddenInput.name = hiddenInput.dataset.originalName || 'termsDocumentVersionId';
-          // console.log('[AdObserver] Чекбокс ВКЛ — name:', hiddenInput.name);
-        } else {
-          hiddenInput.name = 'termsDocumentVersionId_kostilek';
-          // console.log('[AdObserver] Чекбокс ВЫКЛ — name:', hiddenInput.name);
-        }
-      };
-    
-      checkbox.addEventListener('change', updateHiddenName);
-      updateHiddenName();
-    };
 
+      hiddenInputs.forEach((input) => {
+        if (!input.dataset.originalName) {
+          input.dataset.originalName = input.name; // Сохраняем оригинальное имя
+        }
+      });
+
+      const updateHiddenNames = () => {
+        hiddenInputs.forEach((input) => {
+          if (checkbox.checked) {
+            input.name = input.dataset.originalName || 'termsDocumentVersionId';
+            // console.log('[AdObserver] Чекбокс ВКЛ — name:', input.name);
+          } else {
+            input.name = 'termsDocumentVersionId_kostilek';
+            // console.log('[AdObserver] Чекбокс ВЫКЛ — name:', input.name);
+          }
+        });
+      };
+
+      checkbox.addEventListener('change', updateHiddenNames);
+      updateHiddenNames();
+    };
 
     waitUntilValueSet();
   };
@@ -172,7 +174,7 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
             }
           });
           found = true;
-          break;
+          // !!! не выходим из цикла — чтобы оба поля получили значение
         }
       }
       if (found) clearInterval(intervalId);
@@ -201,7 +203,6 @@ const termsConsts = {
 };
 
 
-
 function initTerms(customConfig) {
   const defaultConfig = [
     {
@@ -220,15 +221,15 @@ function initTerms(customConfig) {
       fallbackLink: termsConsts.adv.fallbackLink,
       priority: termsConsts.adv.priority
     }
-  ]
+  ];
 
   const config = Array.isArray(customConfig)
     ? customConfig
     : Array.isArray(window.termsConfig)
       ? window.termsConfig
-      : defaultConfig
+      : defaultConfig;
 
-  config.forEach(cfg => updateLegalSection(cfg))
+  config.forEach(cfg => updateLegalSection(cfg));
 
   // Запускаем наблюдатель за формами
   initAdvObserver();
@@ -242,43 +243,43 @@ function initTerms(customConfig) {
     'customer_attributes_email', 'customer_attributes_parentEmail',
     'tildaspec-phone-part[]', 'tildaspec-phone-part[]-iso', 'referalEmail', 'lastname', 'firstname', 'birthday',
     'parentname', 'parentemail', 'parentphone', 'tildaspec-cookie'
-  ]
+  ];
 
   function getCookieTildaId(name) {
     const match = document.cookie.match(
       new RegExp('(?:^|; )' + name + '=([^;]*)')
-    )
-    return match ? decodeURIComponent(match[1]) : null
+    );
+    return match ? decodeURIComponent(match[1]) : null;
   }
 
-  const originalOpen = XMLHttpRequest.prototype.open
+  const originalOpen = XMLHttpRequest.prototype.open;
 
   XMLHttpRequest.prototype.open = function (method, url) {
     try {
-      const urlObj = new URL(url, window.location.origin)
+      const urlObj = new URL(url, window.location.origin);
 
       if (method.toUpperCase() === 'GET' && url.includes('script.google.com')) {
         // Удаляем чувствительные поля
-        sensitiveFields.forEach((field) => urlObj.searchParams.delete(field))
+        sensitiveFields.forEach((field) => urlObj.searchParams.delete(field));
 
         // Добавляем параметры из cookies, если они есть
-        const tildasid = getCookieTildaId('tildasid')
-        const tildauid = getCookieTildaId('tildauid')
-        if (tildasid) urlObj.searchParams.set('tildasid', tildasid)
-        if (tildauid) urlObj.searchParams.set('tildauid', tildauid)
+        const tildasid = getCookieTildaId('tildasid');
+        const tildauid = getCookieTildaId('tildauid');
+        if (tildasid) urlObj.searchParams.set('tildasid', tildasid);
+        if (tildauid) urlObj.searchParams.set('tildauid', tildauid);
 
-        arguments[1] = urlObj.toString() // Обновлённый URL
+        arguments[1] = urlObj.toString(); // Обновлённый URL
       }
     } catch (e) {
-      console.warn('URL обработка не удалась:', e)
+      console.warn('URL обработка не удалась:', e);
 
       reportErrorToGoogleSheet(
         'https://script.google.com/macros/s/AKfycbyhGl-E4JTKeWW-jGtxSUsiys6DMVC3PH4XrnNSsiHwxN47YyeCmJ-tySIHhhUwaMavnA/exec',
         `XMLHttpRequest.open error: ${e.message}`,
         'DEL PD ADD ID'
-      )
+      );
     }
 
-    return originalOpen.apply(this, arguments)
-  }
-})()
+    return originalOpen.apply(this, arguments);
+  };
+})();
