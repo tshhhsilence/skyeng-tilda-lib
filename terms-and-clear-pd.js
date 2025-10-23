@@ -1,4 +1,4 @@
-// v1.8.0 (модификация: вставляет айди в оба инпута одновременно, для лида и заявки)
+    // v1.8.1 исключение дублирования ссылок согласия
 function initAdvObserver() {
   const OBSERVER_CONFIG = { childList: true, subtree: true };
 
@@ -31,21 +31,14 @@ function initAdvObserver() {
       const updateHiddenNames = () => {
         hiddenInputs.forEach((input) => {
           if (checkbox.checked) {
-            // при включении восстанавливаем имя и значение
             input.name = input.dataset.originalName || 'termsDocumentVersionId';
-            if (input.dataset.lastValue && !input.value) {
-              input.value = input.dataset.lastValue;
-            }
-            // console.log('[AdObserver] Чекбокс ВКЛ — name:', input.name, 'value:', input.value);
+            // console.log('[AdObserver] Чекбокс ВКЛ — name:', input.name);
           } else {
-            // при выключении сохраняем value перед очисткой
-            input.dataset.lastValue = input.value;
             input.name = 'termsDocumentVersionId_kostilek';
-            // console.log('[AdObserver] Чекбокс ВЫКЛ — name:', input.name, 'value сохранено в data-last-value');
+            // console.log('[AdObserver] Чекбокс ВЫКЛ — name:', input.name);
           }
         });
       };
-
 
       checkbox.addEventListener('change', updateHiddenNames);
       updateHiddenNames();
@@ -146,7 +139,7 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
     let updated = false;
 
     labelTexts.forEach((label) => {
-      if (label.textContent.includes(textToFind)) {
+      if (label.textContent.includes(textToFind) && !label.querySelector('a.agreement_link')) {
         const newLink = document.createElement('a');
         newLink.href = link;
         newLink.target = '_blank';
