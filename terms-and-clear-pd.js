@@ -1,4 +1,20 @@
-    // v1.8.1 исключение дублирования ссылок согласия
+// v1.9.0 — добавлено управление логами и задержка запуска рекламы
+
+// ------------------------------------------------------
+// Управление логами
+// ------------------------------------------------------
+window.DEBUG_TERMS = false;
+function logTerms(...args) {
+  if (window.DEBUG_TERMS) console.log(...args);
+}
+function debugTerms(state = true) {
+  window.DEBUG_TERMS = !!state;
+  console.log(`[TermsDebug] Логи ${state ? 'включены' : 'выключены'}`);
+}
+
+// ------------------------------------------------------
+// Наблюдение за чекбоксами рекламы
+// ------------------------------------------------------
 function initAdvObserver() {
   const OBSERVER_CONFIG = { childList: true, subtree: true };
 
@@ -10,12 +26,11 @@ function initAdvObserver() {
     const hiddenInputs = form.querySelectorAll('input[name="termsDocumentVersionId"], input[name="terms_document_version_id"]');
 
     if (!checkbox || hiddenInputs.length === 0) {
-      // console.log('[AdObserver] Пропущена форма: чекбокс или инпут не найдены', form);
+      logTerms('[AdObserver] ❌ Пропущена форма (нет чекбокса или инпутов)', form);
       return;
     }
 
     const waitUntilValueSet = () => {
-      // Проверяем, что хотя бы одно поле уже получило значение
       const allEmpty = Array.from(hiddenInputs).every((input) => !input.value);
       if (allEmpty) {
         requestAnimationFrame(waitUntilValueSet);
@@ -24,7 +39,7 @@ function initAdvObserver() {
 
       hiddenInputs.forEach((input) => {
         if (!input.dataset.originalName) {
-          input.dataset.originalName = input.name; // Сохраняем оригинальное имя
+          input.dataset.originalName = input.name;
         }
       });
 
@@ -32,10 +47,8 @@ function initAdvObserver() {
         hiddenInputs.forEach((input) => {
           if (checkbox.checked) {
             input.name = input.dataset.originalName || 'termsDocumentVersionId';
-            // console.log('[AdObserver] Чекбокс ВКЛ — name:', input.name);
           } else {
             input.name = 'termsDocumentVersionId_kostilek';
-            // console.log('[AdObserver] Чекбокс ВЫКЛ — name:', input.name);
           }
         });
       };
@@ -51,57 +64,45 @@ function initAdvObserver() {
     document.querySelectorAll('form.t-form').forEach(handleForm);
   };
 
-  const observer = new MutationObserver(() => {
-    processForms();
-  });
-
+  const observer = new MutationObserver(processForms);
   observer.observe(document.body, OBSERVER_CONFIG);
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // console.log('[AdObserver] DOM загружен');
-    processForms();
-  });
+  document.addEventListener('DOMContentLoaded', processForms);
 }
 
-/**
- * Глобальная функция для отправки ошибок в Google Таблицу
- * @param {string} url - URL скрипта Google Apps Script
- * @param {string} text - Текст ошибки
- * @param {string} sheet - Название листа
- */
+// ------------------------------------------------------
+// Отправка ошибок
+// ------------------------------------------------------
 async function reportErrorToGoogleSheet(url, text, sheet) {
-  const params = {
-    errText: text,
-    sheet: sheet || '',
-    location: document.location.href,
-  }
-
+  const params = { errText: text, sheet: sheet || '', location: document.location.href };
   const queryString = Object.entries(params)
     .filter(([_, value]) => value !== undefined && value !== '')
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-    .join('&')
-
-  const urlSend = `${url}?${queryString}`
+    .join('&');
+  const urlSend = `${url}?${queryString}`;
 
   try {
-    await fetch(urlSend, {
-      method: 'GET',
-      keepalive: true,
-      mode: 'no-cors',
-    })
-  } catch (error) {
-    console.log('Ошибка при отправке данных в Google Sheet (reportErrorToGoogleSheet)')
+    await fetch(urlSend, { method: 'GET', keepalive: true, mode: 'no-cors' });
+  } catch {
+    logTerms('Ошибка при отправке данных в Google Sheet');
   }
 }
 
-// Глобальный объект для хранения всех юридических данных
-var legal_response = {}
+// ------------------------------------------------------
+// Основная логика установки версий
+// ------------------------------------------------------
+var legal_response = {};
 
+// ⬇️ ПОЛНАЯ ЗАМЕНА функции updateLegalSection
 async function updateLegalSection({ url, inputName, textToFind, fallbackId, fallbackLink, priority }) {
   let versionId = fallbackId;
   let link = fallbackLink;
   let attempts = 0;
   const maxAttempts = 5;
+
+  const isAdvSection = textToFind === termsConsts.adv.textToFind;
+
+  logTerms(`🚀 [${textToFind}] старт updateLegalSection, приоритет ${priority}`);
 
   async function fetchLegalData() {
     try {
@@ -110,24 +111,20 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
       const data = await res.json();
       versionId = data.versionId;
       link = data.link;
-
       legal_response[Array.isArray(inputName) ? inputName[0] : inputName] = data;
+      logTerms(`📥 [${textToFind}] получили versionId=${versionId}`);
     } catch (error) {
       attempts++;
       if (attempts < maxAttempts) {
         await new Promise(r => setTimeout(r, 1000));
         return fetchLegalData();
       } else {
+        console.error(`❌ [${textToFind}] fetch error:`, error.message);
         reportErrorToGoogleSheet(
           'https://script.google.com/macros/s/AKfycbyhGl-E4JTKeWW-jGtxSUsiys6DMVC3PH4XrnNSsiHwxN47YyeCmJ-tySIHhhUwaMavnA/exec',
-          `updateLegalSection (${inputName}) failed after ${maxAttempts} attempts: ${error.message}`,
+          `updateLegalSection (${inputName}) failed: ${error.message}`,
           'Ошибки термса'
         );
-
-        legal_response[Array.isArray(inputName) ? inputName[0] : inputName] = {
-          versionId: fallbackId,
-          link: fallbackLink
-        };
       }
     }
   }
@@ -135,10 +132,11 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
   await fetchLegalData();
 
   const intervalId = setInterval(() => {
+    // 1) Вставка ссылки в лейблы (как было)
     const labelTexts = document.querySelectorAll('.t-checkbox__labeltext');
-    let updated = false;
+    let updatedLinkInserted = false;
 
-    labelTexts.forEach((label) => {
+    labelTexts.forEach(label => {
       if (label.textContent.includes(textToFind) && !label.querySelector('a.agreement_link')) {
         const newLink = document.createElement('a');
         newLink.href = link;
@@ -146,51 +144,85 @@ async function updateLegalSection({ url, inputName, textToFind, fallbackId, fall
         newLink.rel = 'noreferrer noopener';
         newLink.className = 'agreement_link';
         newLink.textContent = textToFind;
-
         label.innerHTML = label.innerHTML.replace(textToFind, newLink.outerHTML);
-        updated = true;
+        updatedLinkInserted = true;
+        logTerms(`🔗 [${textToFind}] вставлена ссылка`);
       }
     });
 
-    if (updated) {
-      let selectors = [];
-      if (Array.isArray(inputName)) {
-        selectors = inputName.map(name => `input[name="${name}"]`);
-      } else {
-        selectors = [`input[name="${inputName}"]`];
+    // 2) Специальная логика для рекламы: если чекбокса рекламы НЕТ — выходим БЕЗ записи
+    if (isAdvSection) {
+      const advCheckbox = document.querySelector('form.t-form input[name="advertisment_agree"], form.t-form input[name="advertisement_agree"]');
+      if (!advCheckbox) {
+        logTerms(`🟡 [${textToFind}] чекбокса рекламы нет — ничего не записываем, очищаем интервал`);
+        clearInterval(intervalId);
+        return; // КРИТИЧЕСКО: предотвращает запись айди рекламы во 2-м кейсе
+      }
+    }
+
+    // 3) Подбираем «корень» для поиска инпутов: для рекламы — форма чекбокса, для ПД — весь документ (как раньше)
+    let rootNode = document;
+    if (isAdvSection) {
+      const advCheckbox = document.querySelector('form.t-form input[name="advertisment_agree"], form.t-form input[name="advertisement_agree"]');
+      rootNode = (advCheckbox && advCheckbox.closest('form')) || document;
+    }
+
+    // 4) Поддерживаем оба имени инпута (camelCase и snake_case) + *_kostilek
+    const selectors = (Array.isArray(inputName)
+      ? inputName.flatMap(name => [`input[name="${name}"]`, `input[name="${name}_kostilek"]`])
+      : [`input[name="${inputName}"]`, `input[name="${inputName}_kostilek"]`]);
+
+    let updated = false;
+
+    for (const selector of selectors) {
+      const inputs = rootNode.querySelectorAll(selector);
+      if (inputs.length === 0) {
+        logTerms(`🔍 [${textToFind}] селектор не найден: ${selector}`);
+        continue;
       }
 
-      let found = false;
-      for (const selector of selectors) {
-        const inputs = document.querySelectorAll(selector);
-        if (inputs.length > 0) {
-          inputs.forEach((input) => {
-            const currentPriority = parseInt(input.dataset.priority || "0", 10);
+      inputs.forEach(input => {
+        const currentPriority = parseInt(input.dataset.priority || "0", 10);
 
-            // обновляем только если наш приоритет выше или поле пустое
-            if (!input.value || priority >= currentPriority) {
-              input.value = versionId;
-              input.dataset.priority = priority; // запоминаем чей приоритет
-            }
-          });
-          found = true;
-          // !!! не выходим из цикла — чтобы оба поля получили значение
+        // ВАЖНО: если это реклама и форма переименовала инпут в *_kostilek при неотмеченном чекбоксе —
+        // запись уйдет в *_kostilek и не попадет на сервер.
+        if (!input.value || priority > currentPriority) {
+          logTerms(`✍️ [${textToFind}] записываем ${versionId} в ${selector}`);
+          input.value = versionId;
+          input.dataset.priority = String(priority);
+          updated = true;
+        } else {
+          logTerms(`⏭ [${textToFind}] пропуск записи, приоритет ${currentPriority} >= ${priority}`);
         }
-      }
-      if (found) clearInterval(intervalId);
+      });
+    }
+
+    if (updated) {
+      logTerms(`✅ [${textToFind}] записали ${versionId}, очищаем интервал`);
+      clearInterval(intervalId);
+    } else {
+      // если мы только ссылку воткнули — через пару тиков всё равно прекратим попытки
+      // чтобы не «висеть» зря
+      setTimeout(() => {
+        logTerms(`🕒 [${textToFind}] таймаут попыток, очищаем интервал`);
+        clearInterval(intervalId);
+      }, 3000);
     }
   }, 1000);
 }
 
 
+// ------------------------------------------------------
+// Константы
+// ------------------------------------------------------
 const termsConsts = {
   terms: {
     url: 'https://legal.skyeng.ru/doc/describe/2068',
-    inputName: ['termsDocumentVersionIdTemp', 'termsDocumentVersionId'],
+    inputName: ['termsDocumentVersionIdTemp', 'termsDocumentVersionId', 'terms_document_version_id'],
     textToFind: 'обработку персональных данных',
     fallbackId: '3970',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/eRy-_sJz/_AyguvNa/KywmoFDR/h5P1cMQo/original/4039.pdf',
-    priority: 1 // низкий приоритет
+    priority: 1
   },
   adv: {
     url: 'https://legal.skyeng.ru/doc/describe/2066',
@@ -198,88 +230,77 @@ const termsConsts = {
     textToFind: 'на получение рекламы',
     fallbackId: '3968',
     fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/Z2eOzlap/4rqD5YqN/3_ibYi7P/5g2y5UGH/original/4037.pdf',
-    priority: 2 // высокий приоритет
+    priority: 2
   }
 };
 
-
+// ------------------------------------------------------
+// Инициализация
+// ------------------------------------------------------
 function initTerms(customConfig) {
-  const defaultConfig = [
-    {
-      url: termsConsts.terms.url,
-      inputName: termsConsts.terms.inputName,
-      textToFind: termsConsts.terms.textToFind,
-      fallbackId: termsConsts.terms.fallbackId,
-      fallbackLink: termsConsts.terms.fallbackLink,
-      priority: termsConsts.terms.priority
-    },
-    {
-      url: termsConsts.adv.url,
-      inputName: termsConsts.adv.inputName,
-      textToFind: termsConsts.adv.textToFind,
-      fallbackId: termsConsts.adv.fallbackId,
-      fallbackLink: termsConsts.adv.fallbackLink,
-      priority: termsConsts.adv.priority
-    }
-  ];
-
+  const defaultConfig = [termsConsts.terms, termsConsts.adv];
   const config = Array.isArray(customConfig)
     ? customConfig
     : Array.isArray(window.termsConfig)
       ? window.termsConfig
       : defaultConfig;
 
-  config.forEach(cfg => updateLegalSection(cfg));
+  const termsCfg = config.find(c => c.priority === 1);
+  const advCfg = config.find(c => c.priority === 2);
 
-  // Запускаем наблюдатель за формами
+  if (termsCfg) {
+    logTerms('⚙️ Запуск updateLegalSection для персональных данных');
+    updateLegalSection(termsCfg);
+  }
+
+  if (advCfg) {
+    logTerms('⏳ Отложенный запуск рекламы через 1500 мс');
+    setTimeout(() => {
+      logTerms('???? Старт updateLegalSection для рекламы');
+      updateLegalSection(advCfg);
+    }, 1500);
+  }
+
   initAdvObserver();
 }
 
+// ------------------------------------------------------
+// Перехват XMLHttpRequest
+// ------------------------------------------------------
 (function () {
   const sensitiveFields = [
     'name', 'parentName', 'childName', 'phone', 'parentPhone', 'email', 'parentEmail',
     'customer_attributes_parentName', 'customer_attributes_name',
     'customer_attributes_parentPhone', 'customer_attributes_phone',
     'customer_attributes_email', 'customer_attributes_parentEmail',
-    'tildaspec-phone-part[]', 'tildaspec-phone-part[]-iso', 'referalEmail', 'lastname', 'firstname', 'birthday',
-    'parentname', 'parentemail', 'parentphone', 'tildaspec-cookie'
+    'tildaspec-phone-part[]', 'tildaspec-phone-part[]-iso', 'referalEmail',
+    'lastname', 'firstname', 'birthday', 'parentname', 'parentemail', 'parentphone', 'tildaspec-cookie'
   ];
 
   function getCookieTildaId(name) {
-    const match = document.cookie.match(
-      new RegExp('(?:^|; )' + name + '=([^;]*)')
-    );
+    const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
     return match ? decodeURIComponent(match[1]) : null;
   }
 
   const originalOpen = XMLHttpRequest.prototype.open;
-
   XMLHttpRequest.prototype.open = function (method, url) {
     try {
       const urlObj = new URL(url, window.location.origin);
-
       if (method.toUpperCase() === 'GET' && url.includes('script.google.com')) {
-        // Удаляем чувствительные поля
-        sensitiveFields.forEach((field) => urlObj.searchParams.delete(field));
-
-        // Добавляем параметры из cookies, если они есть
+        sensitiveFields.forEach(f => urlObj.searchParams.delete(f));
         const tildasid = getCookieTildaId('tildasid');
         const tildauid = getCookieTildaId('tildauid');
         if (tildasid) urlObj.searchParams.set('tildasid', tildasid);
         if (tildauid) urlObj.searchParams.set('tildauid', tildauid);
-
-        arguments[1] = urlObj.toString(); // Обновлённый URL
+        arguments[1] = urlObj.toString();
       }
     } catch (e) {
-      console.warn('URL обработка не удалась:', e);
-
       reportErrorToGoogleSheet(
         'https://script.google.com/macros/s/AKfycbyhGl-E4JTKeWW-jGtxSUsiys6DMVC3PH4XrnNSsiHwxN47YyeCmJ-tySIHhhUwaMavnA/exec',
         `XMLHttpRequest.open error: ${e.message}`,
         'DEL PD ADD ID'
       );
     }
-
     return originalOpen.apply(this, arguments);
   };
 })();
