@@ -4,8 +4,8 @@
   /*flex: initial !important;*/
   flex-basis: initial !important;
   /*width: initial !important;*/
-  margin-top: initial !important;
-  display: initial !important;
+  /* margin-top: initial !important; */
+  /* display: initial !important; */
 }
 
 .tn-form_horiz .t-form__submit, .tn-form_horiz .tn-form__submit {
