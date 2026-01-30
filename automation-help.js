@@ -4,7 +4,7 @@ function waitForZoneJs() {
       if (typeof Zone !== 'undefined' && Zone.current) {
         resolve();
       } else {
-            console.log('Zone.js !!!', window.Zone);
+            // console.log('Zone.js !!!', window.Zone);
         // Проверяем каждые 10мс
         setTimeout(checkZone, 10);
       }
