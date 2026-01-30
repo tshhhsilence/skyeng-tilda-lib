@@ -1,4 +1,5 @@
-// terms.js (v2.0.0) — Tilda agreements collector
+// terms.js (v2.0.1) — Tilda agreements collector
+// remove legacy hidden inputs
   (function () {
     'use strict';
     // -----------------------------
@@ -179,6 +180,28 @@
       }
     }
 
+    // Удаляет старые/конфликтующие hidden-поля Тильды (если они есть)
+    function removeLegacyHiddenInputs(form) {
+      try {
+        if (!form) return;
+    
+        var names = ['terms_document_version_id', 'termsDocumentVerisonId']; // важно: как ты написала
+        for (var i = 0; i < names.length; i++) {
+          var name = names[i];
+          var nodes = form.querySelectorAll('input[type="hidden"][name="' + name + '"]');
+    
+          for (var j = 0; j < nodes.length; j++) {
+            var el = nodes[j];
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+            logTerms('[DEL] legacy hidden removed:', name, form);
+          }
+        }
+      } catch (e) {
+        logTerms('[ERR] removeLegacyHiddenInputs failed:', e && e.message);
+      }
+    }
+
+
     // -----------------------------
     // Legal data fetching with fallback + late update
     // -----------------------------
@@ -273,6 +296,8 @@
     // Пересобирает значение hidden-полей по отмеченным чекбоксам (versionId через запятую)
     function updateHiddenValuesForForm(form) {
       try {
+        removeLegacyHiddenInputs(form);
+        
         var inputsBox = form.querySelector('.t-form__inputsbox');
         if (!inputsBox) return;
 
@@ -367,6 +392,9 @@
 
     // Гарантирует наличие двух hidden полей в форме (для отправки в Tilda)
     function ensureHiddenInputsOnForm(form) {
+      // Удаляем конфликтующие hidden, если легаси их добавил
+      removeLegacyHiddenInputs(form);
+      
       var inputsBox = form.querySelector('.t-form__inputsbox');
       if (!inputsBox) return;
       ensureHiddenInput(inputsBox, HIDDEN_1);
@@ -415,7 +443,7 @@
 
     // Селектор "релевантных" узлов для MutationObserver (всё остальное игнорируем)
     var OBS_RELEVANT_SELECTOR =
-      'form, form.t-form, .t-form__inputsbox, .t-checkbox__labeltext, .t-checkbox, input[type="checkbox"], a.agreement_link';
+      'form, form.t-form, .t-form__inputsbox, .t-checkbox__labeltext, .t-checkbox, input[type="checkbox"], a.agreement_link, input[type="hidden"][name="terms_document_version_id"], input[type="hidden"][name="termsDocumentVerisonId"]';
 
     // Проверяет: этот DOM-узел сам релевантен или содержит релевантные элементы внутри
     function nodeHasRelevant(node) {
