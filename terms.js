@@ -180,26 +180,32 @@
       }
     }
 
-    // Удаляет старые/конфликтующие hidden-поля Тильды (если они есть)
+    // Удаляет лишние hidden-инпуты termsDocumentVersionId / terms_document_version_id
     function removeLegacyHiddenInputs(form) {
       try {
         if (!form) return;
     
-        var names = ['terms_document_version_id', 'termsDocumentVerisonId']; // важно: как ты написала
+        var names = [
+          'terms_document_version_id',
+          'termsDocumentVersionId'
+        ];
+    
         for (var i = 0; i < names.length; i++) {
           var name = names[i];
-          var nodes = form.querySelectorAll('input[type="hidden"][name="' + name + '"]');
-    
+          var nodes = form.querySelectorAll('input[name="' + name + '"]');
           for (var j = 0; j < nodes.length; j++) {
             var el = nodes[j];
-            if (el && el.parentNode) el.parentNode.removeChild(el);
-            logTerms('[DEL] legacy hidden removed:', name, form);
+            if (el && el.parentNode) {
+              el.parentNode.removeChild(el);
+              logTerms('[DEL] legacy hidden removed:', name, el);
+            }
           }
         }
       } catch (e) {
         logTerms('[ERR] removeLegacyHiddenInputs failed:', e && e.message);
       }
     }
+
 
 
     // -----------------------------
@@ -409,6 +415,7 @@
           var form = forms[i];
           if (!form) continue;
 
+          removeLegacyHiddenInputs(form);
           ensureHiddenInputsOnForm(form);
 
           for (var j = 0; j < configArray.length; j++) {
@@ -443,7 +450,7 @@
 
     // Селектор "релевантных" узлов для MutationObserver (всё остальное игнорируем)
     var OBS_RELEVANT_SELECTOR =
-      'form, form.t-form, .t-form__inputsbox, .t-checkbox__labeltext, .t-checkbox, input[type="checkbox"], a.agreement_link, input[type="hidden"][name="terms_document_version_id"], input[type="hidden"][name="termsDocumentVerisonId"]';
+      'form, form.t-form, .t-form__inputsbox, .t-checkbox__labeltext, .t-checkbox, input[type="checkbox"], a.agreement_link, input[type="hidden"][name="terms_document_version_id"], input[type="hidden"][name="termsDocumentVersionId"]';
 
     // Проверяет: этот DOM-узел сам релевантен или содержит релевантные элементы внутри
     function nodeHasRelevant(node) {
