@@ -25,13 +25,13 @@
     var termsConsts = {
       terms: {
         url: 'https://legal.skyeng.ru/doc/describe/2068',
-        textToFind: 'обработку персональных данных',
+        textToFind: 'персональных данных',
         fallbackId: '3981',
         fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/1BcCZSVE/NkS-8hoq/Icjjk9vw/OOSkLtYz/original/4050.pdf'
       },
       adv: {
         url: 'https://legal.skyeng.ru/doc/describe/2066',
-        textToFind: 'на получение рекламы',
+        textToFind: 'рекламы',
         fallbackId: '3982',
         fallbackLink: 'https://legal.skyeng.ru/upload/document-version-pdf/VJ0cRv8U/j1K207LU/8JqOoUkY/InLIltOn/original/4051.pdf'
       }
